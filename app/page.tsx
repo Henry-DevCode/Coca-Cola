@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ScrollProvider, useScrollProgress } from "@/components/scroll-context";
 import Nav from "@/components/nav";
@@ -9,10 +10,9 @@ import Ingredients from "@/components/sections/ingredients";
 import Showcase from "@/components/sections/showcase";
 import FinalCta from "@/components/sections/final-cta";
 import CssSparkles from "@/components/css-sparkles";
+import LoadingScreen from "@/components/loading-screen";
 
-// The 3D scene is client + WebGL-only. Dynamic-import with ssr: false so it
-// never touches the server bundle, and give it a subtle black fallback so
-// the DOM sections layer smoothly on top while it hydrates.
+// Dynamic-import so three.js / R3F never touches the server bundle.
 const Scene3D = dynamic(() => import("@/components/scene-3d"), {
   ssr: false,
   loading: () => (
@@ -24,17 +24,40 @@ const Scene3D = dynamic(() => import("@/components/scene-3d"), {
 });
 
 export default function Home() {
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [modelReady, setModelReady] = useState(false);
+
+  // Stable callbacks — never recreated, so Scene3D won't re-render.
+  const handleProgress = useCallback((p: number) => setLoadProgress(p), []);
+  const handleReady = useCallback(() => setModelReady(true), []);
+
+  // Prevent scrolling while the loading screen is up.
+  useEffect(() => {
+    if (modelReady) {
+      document.body.style.overflow = "";
+    } else {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [modelReady]);
+
   return (
     <ScrollProvider>
+      {/* ── Loading overlay (z-100, above everything) ── */}
+      <LoadingScreen progress={loadProgress} ready={modelReady} />
+
+      {/* ── Navigation (hidden behind loader until ready) ── */}
       <Nav />
 
-      {/* Fixed 3D layer sits behind every DOM section (z-0) */}
-      <Scene3D />
+      {/* ── Fixed 3D canvas ── */}
+      <Scene3D onProgress={handleProgress} onReady={handleReady} />
 
-      {/* CSS sparkle / droplet overlay — sits just above the canvas */}
+      {/* ── CSS sparkle overlay ── */}
       <CssSparkles riseCount={38} glintCount={18} />
 
-      {/* Content sits above the canvas */}
+      {/* ── Page sections ── */}
       <main className="relative z-10 flex w-full flex-col">
         <Hero />
         <ProductExperience />
@@ -43,7 +66,7 @@ export default function Home() {
         <FinalCta />
       </main>
 
-      {/* Progress bar pinned to the top for a premium feel */}
+      {/* ── Scroll progress bar ── */}
       <ScrollProgressBar />
     </ScrollProvider>
   );
