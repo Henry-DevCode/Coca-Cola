@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ScrollProvider, useScrollProgress } from "@/components/scroll-context";
 import Nav from "@/components/nav";
-import Hero from "@/components/sections/hero";
+import Hero from "@/components/sections/home";
 import ProductExperience from "@/components/sections/product-experience";
 import Ingredients from "@/components/sections/ingredients";
 import Showcase from "@/components/sections/showcase";
