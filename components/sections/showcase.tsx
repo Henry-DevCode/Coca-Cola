@@ -59,10 +59,10 @@ export default function Showcase() {
     <section
       ref={sectionRef}
       id="showcase"
-      className="relative flex min-h-screen w-full items-center overflow-hidden px-6 sm:px-10"
+      className="relative flex min-h-[110vh] w-full items-center overflow-hidden px-6 sm:px-10"
     >
-      {/* Foreground UI is pushed to the right so the 3D can can shift left */}
-      <div className="relative z-10 ml-auto max-w-xl md:max-w-2xl">
+      {/* Text on the RIGHT half — can drifts into the LEFT half */}
+      <div className="relative z-10 ml-auto mr-[8%] max-w-lg">
         <span className="text-xs font-medium uppercase tracking-[0.4em] text-coke-red">
           The Can
         </span>

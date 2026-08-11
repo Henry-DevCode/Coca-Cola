@@ -47,7 +47,7 @@ export default function ProductExperience() {
     <section
       ref={sectionRef}
       id="story"
-      className="relative flex min-h-screen w-full items-center overflow-hidden px-6 sm:px-10"
+      className="relative flex min-h-[110vh] w-full items-center overflow-hidden px-6 sm:px-10"
     >
       {/* Background parallax word */}
       <div
@@ -60,8 +60,8 @@ export default function ProductExperience() {
         </span>
       </div>
 
-      {/* Foreground text */}
-      <div ref={textLayer} className="relative z-10 max-w-2xl">
+      {/* Text sits on the LEFT half — can drifts into the RIGHT half */}
+      <div ref={textLayer} className="relative z-10 w-full max-w-lg ml-[8%]">
         <motion.span
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -86,7 +86,7 @@ export default function ProductExperience() {
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
-          className="mt-6 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg"
+          className="mt-6 text-base leading-relaxed text-white/70 sm:text-lg"
         >
           A shape you recognise before you read the label. A crack of the tab
           that hits before the first sip. Every millimetre of aluminium — from

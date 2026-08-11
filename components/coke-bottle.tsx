@@ -9,6 +9,14 @@ type CokeBottleProps = {
   progressRef: React.MutableRefObject<number>;
 };
 
+/**
+ * Scroll progress bands (approximate):
+ *   0.00 – 0.18  Hero         — centred, breathes, slow spin
+ *   0.18 – 0.38  Story        — drifts RIGHT to fill the empty left half
+ *   0.38 – 0.55  Feel         — returns to centre, faster spin + tilt
+ *   0.55 – 0.75  Showcase     — drifts LEFT to fill the empty right half
+ *   0.75 – 1.00  CTA          — returns to centre, zooms forward
+ */
 export default function CokeBottle({ progressRef }: CokeBottleProps) {
   const group = useRef<THREE.Group>(null);
   const { scene } = useGLTF("/model/coke.glb");
@@ -16,47 +24,58 @@ export default function CokeBottle({ progressRef }: CokeBottleProps) {
   useFrame((state) => {
     if (!group.current) return;
     const t = state.clock.getElapsedTime();
-    const p = progressRef.current; // 0 → 1 across the full page
+    const p = progressRef.current; // 0 → 1
 
-    // ----- ROTATION -----
+    // ── ROTATION ──────────────────────────────────────────────────────────
 
-    // Y-axis spin: slow idle + accelerated by scroll.
-    const yRot = t * 0.4 + p * Math.PI * 6;
+    // Y-spin: idle + scroll-accelerated.
+    const yRot = t * 0.45 + p * Math.PI * 7;
 
-    const flipEase = easeInOutCubic(p);
-    const xRot = flipEase * Math.PI * 2;
+    // Full vertical flip across the whole page (one 360° over the journey).
+    const xRot = easeInOutCubic(p) * Math.PI * 2;
 
-    // Gentle Z tilt for "alive" feel + slight scroll-driven lean.
-    const zRot = Math.sin(t * 0.5) * 0.06 + Math.sin(p * Math.PI * 4) * 0.12;
+    // Z tilt: idle sway + section-driven lean.
+    // Leans left in Story, leans right in Showcase for a dynamic look.
+    const storyLean  =  smoothstep(0.15, 0.35, p) - smoothstep(0.38, 0.55, p);
+    const showLean   = -(smoothstep(0.55, 0.75, p) - smoothstep(0.75, 0.88, p));
+    const zRot = Math.sin(t * 0.5) * 0.06 + storyLean * 0.15 + showLean * 0.18;
 
     group.current.rotation.set(xRot, yRot, zRot);
 
-    // ----- POSITION -----
+    // ── POSITION ──────────────────────────────────────────────────────────
 
-    // Idle floating bob.
+    // Idle bob — always present.
     const bob = Math.sin(t * 0.9) * 0.1;
 
-    // Horizontal drift: bottle slides left during Showcase (≈0.55–0.8).
-    const showcase = smoothstep(0.55, 0.8, p) - smoothstep(0.8, 0.95, p);
-    const driftX = -1.2 * showcase + Math.sin(t * 0.3) * 0.05;
+    // X: drift RIGHT during Story so it fills the empty left gap.
+    //    drift LEFT during Showcase so it fills the empty right gap.
+    const storyDrift   =  smoothstep(0.18, 0.38, p) - smoothstep(0.38, 0.55, p);
+    const showDrift    = -(smoothstep(0.55, 0.75, p) - smoothstep(0.75, 0.90, p));
+    const driftX = storyDrift * 1.6 + showDrift * 1.6 + Math.sin(t * 0.3) * 0.04;
 
-    // Vertical: start centered, tiny scroll drift downward.
-    const posY = bob - 1.7 - p * 0.1;
+    // Y: arc the model through the page — rises slightly mid-page, settles.
+    //    Each section gets a distinct vertical landmark so it reads as
+    //    "the can is travelling" not "stuck in the middle".
+    const heroY    = (1 - smoothstep(0, 0.18, p))       * -0.2;
+    const storyY   = smoothstep(0.18, 0.38, p)           *  0.35;
+    const feelY    = smoothstep(0.38, 0.55, p)           * -0.25;
+    const showcaseY = smoothstep(0.55, 0.75, p)          *  0.3;
+    const ctaY     = smoothstep(0.75, 1.0, p)            * -0.4;
+    const posY = bob - 1.7 + heroY + storyY + feelY + showcaseY + ctaY;
 
-    // Forward zoom in the final CTA band (0.85–1.0).
-    const finalZoom = smoothstep(0.85, 1.0, p);
-    const posZ = finalZoom * 0.7;
+    // Z: zoom forward in the CTA.
+    const posZ = smoothstep(0.85, 1.0, p) * 0.5;
 
     group.current.position.set(driftX, posY, posZ);
 
-    // ----- SCALE -----
-    // Base scale of 3× makes the model fill the viewport nicely.
+    // ── SCALE ─────────────────────────────────────────────────────────────
+
     const BASE_SCALE = 20;
-    const hero = 1 - smoothstep(0, 0.15, p);
-    const cta = smoothstep(0.85, 1.0, p);
-    const scale =
-      BASE_SCALE * (1 + hero * 0.04 + cta * 0.15 + Math.sin(t * 1.2) * 0.005);
-    group.current.scale.setScalar(scale);
+    // Breathe gently in the hero, swell for the CTA zoom.
+    const heroPulse = (1 - smoothstep(0, 0.18, p)) * 0.20;
+    const ctaSwell  = smoothstep(0.85, 1.0, p) * 0.18;
+    const breathe   = Math.sin(t * 1.2) * 0.005;
+    group.current.scale.setScalar(BASE_SCALE * (1 + heroPulse + ctaSwell + breathe));
   });
 
   return (
@@ -66,10 +85,7 @@ export default function CokeBottle({ progressRef }: CokeBottleProps) {
   );
 }
 
-// Preload so the model starts downloading immediately.
 useGLTF.preload("/model/coke.glb");
-
-// --- Utility functions ---
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
